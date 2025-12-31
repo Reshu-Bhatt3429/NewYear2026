@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 Editorial | Stable</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400&family=Roboto+Mono:wght@700&family=Inter:wght@300&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #000000; 
+            --digit-color: #ffffff; 
+            --label-color: #666666;
+            --digit-size: 14vw; 
+            --anim-duration: 0.8s;
+            --ease-custom: cubic-bezier(0.25, 1, 0.5, 1); 
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--digit-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        /* --- HEADER --- */
+        .header-ui {
+            position: absolute;
+            top: 5%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-weight: 400;
+            font-size: 2.5rem;
+            margin: 0 0 25px 0;
+            color: var(--digit-color);
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+        }
+
+        .btn {
+            background: transparent;
+            border: 1px solid #333;
+            color: #666;
+            padding: 10px 30px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover { border-color: #fff; color: #fff; }
+        .btn.active { background: #fff; color: #000; border-color: #fff; font-weight: bold; }
+
+        /* --- CLOCK CONTAINER --- */
+        .timer-container {
+            display: flex;
+            gap: 2vw; 
+            align-items: flex-start;
+        }
+
+        .time-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* Fixed width ensures seconds don't push minutes around */
+            width: 18vw; 
+        }
+
+        .digit-window {
+            height: var(--digit-size); 
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            /* Gradient mask to fade numbers in/out */
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+        }
+
+        .digit {
+            /* Use Roboto Mono to ensure every number is exactly the same width */
+            font-family: 'Roboto Mono', monospace;
+            font-size: var(--digit-size);
+            line-height: 1;
+            color: var(--digit-color);
+            
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            top: 0;
+            left: 0;
+            
+            will-change: transform;
+        }
+
+        /* --- ANIMATION STATES --- */
+        /* Default: Waiting below */
+        .digit.next { transform: translateY(110%); }
+        
+        /* Visible */
+        .digit.current { transform: translateY(0); }
+        
+        /* Exiting above */
+        .digit.exit { transform: translateY(-110%); }
+
+        /* The class that enables movement */
+        .digit.animating {
+            transition: transform var(--anim-duration) var(--ease-custom);
+        }
+
+        .label {
+            margin-top: 15px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 300;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--label-color);
+        }
+
+        /* --- CELEBRATION MODE --- */
+        body.celebration { background-color: #ffffff; --digit-color: #000000; --label-color: #555555; }
+        body.celebration .btn { border-color: #ddd; color: #999; }
+        body.celebration .btn.active { background: #000; color: #fff; border-color: #000; }
+
+        @media (max-width: 768px) {
+            :root { --digit-size: 15vw; }
+            .timer-container { gap: 5px; }
+            .time-unit { width: 22vw; }
+            h1 { font-size: 1.5rem; margin-bottom: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-ui">
+        <h1 id="main-title">2026 Awaits</h1>
+        <div class="controls">
+            <button class="btn active" onclick="setZone('india')" id="btn-india">India</button>
+            <button class="btn" onclick="setZone('greece')" id="btn-greece">Greece</button>
+        </div>
+    </div>
+
+    <div class="timer-container">
+        <div class="time-unit">
+            <div class="digit-window" id="win-days">
+                <span class="digit current">00</span>
+                <span class="digit next">00</span>
+            </div>
+            <span class="label">Days</span>
+        </div>
+        <div class="time-unit">
+            <div class="digit-window" id="win-hours">
+                <span class="digit current">00</span>
+                <span class="digit next">00</span>
+            </div>
+            <span class="label">Hours</span>
+        </div>
+        <div class="time-unit">
+            <div class="digit-window" id="win-minutes">
+                <span class="digit current">00</span>
+                <span class="digit next">00</span>
+            </div>
+            <span class="label">Minutes</span>
+        </div>
+        <div class="time-unit">
+            <div class="digit-window" id="win-seconds">
+                <span class="digit current">00</span>
+                <span class="digit next">00</span>
+            </div>
+            <span class="label">Seconds</span>
+        </div>
+    </div>
+
+    <script>
+        const targetYear = 2026;
+        const timeZones = {
+            india: 'Asia/Kolkata',
+            greece: 'Europe/Athens'
+        };
+        let currentZone = 'india';
+
+        const pad = num => num < 10 ? '0' + num : num;
+
+        function updateDigit(windowId, newValue, instant = false) {
+            const windowEl = document.getElementById(windowId);
+            const currentEl = windowEl.querySelector('.current');
+            const nextEl = windowEl.querySelector('.next');
+            
+            // TRIM whitespace to ensure strict comparison
+            if (!instant && currentEl.innerText.trim() === newValue.toString()) return;
+
+            // --- INSTANT MODE (Forces Reset) ---
+            if (instant) {
+                // 1. Strip animation classes immediately
+                currentEl.classList.remove('animating', 'exit', 'next');
+                nextEl.classList.remove('animating', 'exit', 'current');
+                
+                // 2. Set Values
+                currentEl.innerText = newValue;
+                nextEl.innerText = newValue; 
+                
+                // 3. Force Reset Positions
+                currentEl.classList.add('current');
+                nextEl.classList.add('next');
+                
+                // 4. Force Browser Reflow (Crucial: clears pending paint logic)
+                void currentEl.offsetWidth; 
+                return;
+            }
+
+            // --- ANIMATION MODE ---
+            nextEl.innerText = newValue;
+            
+            // Enable smooth transition
+            currentEl.classList.add('animating');
+            nextEl.classList.add('animating');
+
+            // Trigger Move
+            currentEl.classList.remove('current');
+            currentEl.classList.add('exit');
+
+            nextEl.classList.remove('next');
+            nextEl.classList.add('current');
+
+            // Cleanup via Timeout (More robust than event listeners for rapid updates)
+            setTimeout(() => {
+                currentEl.classList.remove('animating', 'exit');
+                nextEl.classList.remove('animating');
+                
+                // Reset the old element to be the waiting "next" element
+                currentEl.classList.add('next');
+                
+                // Note: We don't swap variables here because the DOM query
+                // at the start of the function will naturally pick up the correct
+                // elements based on their new class names next time.
+            }, 800); // Matches CSS duration
+        }
+
+        function setZone(zone) {
+            currentZone = zone;
+            document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${zone}`).classList.add('active');
+            updateTime(true); // Pass true for INSTANT update
+        }
+
+        function updateTime(instant = false) {
+            const tzString = timeZones[currentZone];
+            const now = new Date();
+            const nowInZone = new Date(now.toLocaleString("en-US", { timeZone: tzString }));
+            const targetDate = new Date(`January 1, ${targetYear} 00:00:00`);
+            
+            let diff = targetDate - nowInZone;
+            let isPast = false;
+
+            if (diff <= 0) {
+                isPast = true;
+                diff = Math.abs(diff);
+            }
+
+            const title = document.getElementById('main-title');
+            if (isPast) {
+                title.innerText = `Welcome to ${targetYear}`;
+                document.body.classList.add('celebration');
+            } else {
+                title.innerText = `${targetYear} Awaits`;
+                document.body.classList.remove('celebration');
+            }
+
+            const d = Math.floor(diff / 1000 / 60 / 60 / 24);
+            const h = Math.floor(diff / 1000 / 60 / 60) % 24;
+            const m = Math.floor(diff / 1000 / 60) % 60;
+            const s = Math.floor(diff / 1000) % 60;
+
+            updateDigit('win-days', pad(d), instant);
+            updateDigit('win-hours', pad(h), instant);
+            updateDigit('win-minutes', pad(m), instant);
+            updateDigit('win-seconds', pad(s), instant);
+        }
+
+        // Initialize
+        updateTime(true);
+        setInterval(() => updateTime(false), 1000);
+    </script>
+</body>
+</html>
